@@ -150,7 +150,7 @@ def new_user():
 @app.route('/api/users/<int:userid>')
 def get_user(id):
     """
-    Get the id user.
+    Get the user by id.
     :param id:
     :return:
     """
@@ -241,7 +241,7 @@ def verify():
     })
 
 
-#
+# the main entry when using flask only, of course you should use uwsgi instead in deploy environment.
 if __name__ == '__main__':
     if not os.path.exists('db.sqlite'):
         db.create_all()
