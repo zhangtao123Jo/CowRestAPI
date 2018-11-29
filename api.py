@@ -88,6 +88,27 @@ class LogInfo(db.Model):
         return True
 
 
+class Archives(db.Model):
+    __tablename__ = 'archives'
+    aid = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    rfid_code = db.Column(db.String(32))
+    age = db.Column(db.Integer)
+    company_id = db.Column(db.String(32))
+    gather_time = db.Column(db.String(32))
+    folder_path = db.Column(db.String(200))
+    health_status = db.Column(db.String(32))
+    extra_info = db.Column(db.String(64), nullable=True)
+
+    def insert_record(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except:
+            db.session.rollback()
+            return False
+        return True
+
+
 @auth.verify_password
 def verify_password(userid_or_token, password):
     # first try to authenticate by token
@@ -148,16 +169,16 @@ def new_user():
 
 
 @app.route('/api/users/<int:userid>')
-def get_user(id):
+def get_user(userid):
     """
     Get the user by id.
-    :param id:
+    :param userid:
     :return:
     """
-    user = User.query.get(id)
+    user = User.query.get(userid)
     if not user:
         abort(400)
-    return jsonify({'username': user.username})
+    return jsonify({'username': user.userid})
 
 
 @app.route('/api/token')
@@ -222,9 +243,27 @@ def verify():
     ip = json_obj.get('ip')
     imei = json_obj.get('imei')
     video = request.files['video']
+    # make the save folder path and save the video
+    folder_path = os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    video.save(folder_path + utils.secure_filename(video.filename))
+
     # make async execution thread for the video save and frame grabber
     executor.submit(utils.process_video_to_image, video,
                     os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep, rfid_code)
+
+    # TODO: for zhangtao
+    # give the age value, 0 for default now.
+    age = 0  # json_obj.get("age")
+    # give the health_status value, 1 for default now.
+    health_status = '1'  # json_obj.get("health_status")
+
+    archives = Archives(rfid_code=rfid_code, age=age, company_id=company_id, gather_time=gather_time,
+                        health_status=health_status,
+                        folder_path=os.path.join(app.config.base_images_path, company_id, rfid_code),
+                        extra_info='file name is : ' + video.filename)
+    archives.insert_record()
     # log the submit info to the db
     li = LogInfo(company_id=company_id, rfid_code=rfid_code, remote_ip=ip, imei=imei,
                  extra_info='file name is : ' + video.filename)
@@ -239,6 +278,25 @@ def verify():
         'ip': ip,
         'imei': imei,
     })
+
+
+@app.route('/api/list', methods=['POST'])
+def cow_list_by_company_id():
+    def json_serilize(instance):
+        return {
+            "aid": instance.aid,
+            "rfid_code": instance.rfid_code,
+            "age": instance.age,
+            "company_id": instance.company_id,
+            "gather_time": instance.gather_time,
+            "health_status": instance.health_status,
+            "extra_info": instance.extra_info,
+            "folder_path": instance.folder_path
+        }
+
+    company_id = request.json.get("companyid")
+    cow_list = Archives.query.filter_by(company_id=company_id).all()
+    return json.dumps(cow_list, default=json_serilize)
 
 
 # the main entry when using flask only, of course you should use uwsgi instead in deploy environment.

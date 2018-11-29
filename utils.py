@@ -61,7 +61,6 @@ def process_video_to_image(video, folder_path, rfid_code):
     :return:
     """
     try:
-        video.save(folder_path + secure_filename(video.filename))
         import cv2
         vid_cap = cv2.VideoCapture(folder_path + secure_filename(video.filename))
         success, image = vid_cap.read()
