@@ -78,9 +78,10 @@ class LogInfo(db.Model):
     imei = db.Column(db.String(64))
     extra_info = db.Column(db.String(64), nullable=True)
 
-    def insert_record(self):
+    def insert_record(self,db_list):
         try:
-            db.session.add(self)
+            for db_name in db_list:
+                db.session.add(db_name)
             db.session.commit()
         except:
             db.session.rollback()
@@ -98,15 +99,6 @@ class Archives(db.Model):
     folder_path = db.Column(db.String(200))
     health_status = db.Column(db.String(32))
     extra_info = db.Column(db.String(64), nullable=True)
-
-    def insert_record(self):
-        try:
-            db.session.add(self)
-            db.session.commit()
-        except:
-            db.session.rollback()
-            return False
-        return True
 
 
 @auth.verify_password
@@ -263,11 +255,12 @@ def verify():
                         health_status=health_status,
                         folder_path=os.path.join(app.config.base_images_path, company_id, rfid_code),
                         extra_info='file name is : ' + video.filename)
-    archives.insert_record()
+
     # log the submit info to the db
     li = LogInfo(company_id=company_id, rfid_code=rfid_code, remote_ip=ip, imei=imei,
                  extra_info='file name is : ' + video.filename)
-    li.insert_record()
+    db_list=[archives,li]
+    li.insert_record(db_list)
 
     return jsonify({
         'userid': user_id,
