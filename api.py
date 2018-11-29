@@ -249,8 +249,8 @@ def verify():
     # log the submit info to the db
     li = LogInfo(company_id=company_id, rfid_code=rfid_code, remote_ip=ip, imei=imei,
                  extra_info='file name is : ' + video.filename)
-    db_list=[archives,li]
-    utils.insert_record(db_list)
+    db_list = [archives, li]
+    utils.insert_record(db_list, db)
 
     return jsonify({
         'userid': user_id,

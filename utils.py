@@ -2,7 +2,7 @@ import base64
 import glob
 import os
 from werkzeug.utils import secure_filename
-import api
+
 
 def get_files(path, top):
     """get the jpg files under the path"""
@@ -67,7 +67,8 @@ def process_video_to_image(video, folder_path, rfid_code):
         count = 0
         while success:
             vid_cap.set(cv2.CAP_PROP_POS_MSEC, 0.5 * 1000 * count)
-            cv2.imwrite(folder_path + rfid_code + "_" + str(count) + "_" + "1" + ".jpg", image)  # save frame as JPEG file
+            cv2.imwrite(folder_path + rfid_code + "_" + str(count) + "_" + "1" + ".jpg",
+                        image)  # save frame as JPEG file
             success, image = vid_cap.read()
             count += 1
         print('Total frames: ', count)
@@ -76,12 +77,13 @@ def process_video_to_image(video, folder_path, rfid_code):
         return False
     return True
 
-def insert_record(db_list):
+
+def insert_record(db_list, db):
     try:
         for db_name in db_list:
-            api.db.session.add(db_name)
-        api.db.session.commit()
+            db.session.add(db_name)
+        db.session.commit()
     except:
-        api.db.session.rollback()
+        db.session.rollback()
         return False
     return True
