@@ -2,7 +2,7 @@ import base64
 import glob
 import os
 from werkzeug.utils import secure_filename
-
+import api
 
 def get_files(path, top):
     """get the jpg files under the path"""
@@ -73,5 +73,15 @@ def process_video_to_image(video, folder_path, rfid_code):
         print('Total frames: ', count)
     except:
         print("error")
+        return False
+    return True
+
+def insert_record(db_list):
+    try:
+        for db_name in db_list:
+            api.db.session.add(db_name)
+        api.db.session.commit()
+    except:
+        api.db.session.rollback()
         return False
     return True

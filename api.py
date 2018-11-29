@@ -78,16 +78,6 @@ class LogInfo(db.Model):
     imei = db.Column(db.String(64))
     extra_info = db.Column(db.String(64), nullable=True)
 
-    def insert_record(self,db_list):
-        try:
-            for db_name in db_list:
-                db.session.add(db_name)
-            db.session.commit()
-        except:
-            db.session.rollback()
-            return False
-        return True
-
 
 class Archives(db.Model):
     __tablename__ = 'archives'
@@ -260,7 +250,7 @@ def verify():
     li = LogInfo(company_id=company_id, rfid_code=rfid_code, remote_ip=ip, imei=imei,
                  extra_info='file name is : ' + video.filename)
     db_list=[archives,li]
-    li.insert_record(db_list)
+    utils.insert_record(db_list)
 
     return jsonify({
         'userid': user_id,
