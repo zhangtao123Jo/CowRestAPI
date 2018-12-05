@@ -22,10 +22,12 @@ executor = ThreadPoolExecutor(4)
 # initialization
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'the beijing telecom research center'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+app.config['SQLALCHEMY_DATABASE_URI']='mysql+mysqlconnector://root:123456@localhost:3306/cowrest'
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-app.config.base_images_path = 'f:/test_flask'
+# app.config.base_images_path = 'f:/test_flask'
+app.config.base_images_path = 'd:/cowrest_test'
 
 # extensions
 db = SQLAlchemy(app)
@@ -109,6 +111,17 @@ def verify_password(userid_or_token, password):
 ################################################
 
 
+
+@app.errorhandler(400)
+def error_400(error):
+    return jsonify({"status":"1x0000","message":"{} param no right".format(error)})
+
+
+@app.errorhandler(403)
+def error_403(error):
+    return jsonify({"status":"5x0001","message":"Data already exists"})
+
+
 @app.errorhandler(404)
 def error_404(error):
     return str(error)
@@ -122,6 +135,11 @@ def error_405(error):
 @app.errorhandler(500)
 def error_500(error):
     return str(error)
+
+
+@app.errorhandler(502)
+def error_502(error):
+    return jsonify({"status":"3x0000","message":"database operation error"})
 
 
 ###############################################
@@ -138,10 +156,9 @@ def new_user():
     userid = request.json.get('userid')
     password = request.json.get('password')
     company_id = request.json.get('company_id')
-    if userid is None or password is None or company_id is None:
-        abort(400)  # missing arguments
+    utils.verify_param(abort,error_code=400,userid=userid,password=password,company_id=company_id)
     if User.query.filter_by(userid=userid).first() is not None:
-        abort(400)  # existing user
+        abort(403)  # existing user
     user = User(userid=userid, company_id=company_id)
     user.hash_password(password)
     db.session.add(user)
@@ -157,9 +174,9 @@ def get_user(userid):
     :param userid:
     :return:
     """
+
     user = User.query.get(userid)
-    if not user:
-        abort(400)
+    utils.verify_param(abort,error_code=502,user=user)
     return jsonify({'username': user.userid})
 
 
@@ -182,6 +199,7 @@ def prospect():
     image_array = request.json.get('items')
     predict_array = []
     cid_array = []
+    utils.verify_param(abort,error_code=400,user_id=user_id,company_id=company_id,gather_time=gather_time,rfid_code=rfid_code,ip=ip,imei=imei,image_array=image_array)
     for i, item in enumerate(image_array):
         # get the base64 str and decode them to image
         img_base64 = item.get('cvalue')
@@ -224,7 +242,11 @@ def verify():
     rfid_code = json_obj.get('rfidcode')
     ip = json_obj.get('ip')
     imei = json_obj.get('imei')
-    video = request.files['video']
+    try:
+        video = request.files['video']
+    except:
+        video=None
+    utils.verify_param(abort,error_code=400,user_id=user_id,json_obj=json_obj,company_id=company_id,gather_time=gather_time,rfid_code=rfid_code,ip=ip,imei=imei,video=video)
     # make the save folder path and save the video
     folder_path = os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep
     if not os.path.exists(folder_path):
@@ -241,29 +263,32 @@ def verify():
     # give the health_status value, 1 for default now.
     health_status = '1'  # json_obj.get("health_status")
 
-    archives = Archives(rfid_code=rfid_code, age=age, company_id=company_id, gather_time=gather_time,
-                        health_status=health_status,
-                        folder_path=os.path.join(app.config.base_images_path, company_id, rfid_code),
-                        extra_info='file name is : ' + video.filename)
+    if Archives.query.filter_by(rfid_code=rfid_code).first():
+        abort(403)
+    else:
+        archives = Archives(rfid_code=rfid_code, age=age, company_id=company_id, gather_time=gather_time,
+                            health_status=health_status,
+                            folder_path=os.path.join(app.config.base_images_path, company_id, rfid_code),
+                            extra_info='file name is : ' + video.filename)
 
-    # log the submit info to the db
-    li = LogInfo(company_id=company_id, rfid_code=rfid_code, remote_ip=ip, imei=imei,
-                 extra_info='file name is : ' + video.filename)
-    db_list = [archives, li]
-    utils.insert_record(db_list, db)
-
-    return jsonify({
-        'userid': user_id,
-        'companyid': company_id,
-        'resoult': True,
-        'gather_time': gather_time,
-        'verinfo': 'jobs was launched in background',
-        'ip': ip,
-        'imei': imei,
-    })
+        # log the submit info to the db
+        li = LogInfo(company_id=company_id, rfid_code=rfid_code, remote_ip=ip, imei=imei,
+                     extra_info='file name is : ' + video.filename)
+        db_list = [archives, li]
+        utils.insert_record(db_list, db,abort)
+        return jsonify({
+            'userid': user_id,
+            'companyid': company_id,
+            'resoult': True,
+            'gather_time': gather_time,
+            'verinfo': 'jobs was launched in background',
+            'ip': ip,
+            'imei': imei,
+        })
 
 
 @app.route('/api/list', methods=['POST'])
+@auth.login_required
 def cow_list_by_company_id():
     def json_serilize(instance):
         return {
@@ -276,10 +301,38 @@ def cow_list_by_company_id():
             "extra_info": instance.extra_info,
             "folder_path": instance.folder_path
         }
-
+    current_page=request.json.get("currentpage")
+    cow_number=request.json.get("cownumber")
     company_id = request.json.get("companyid")
-    cow_list = Archives.query.filter_by(company_id=company_id).all()
-    return json.dumps(cow_list, default=json_serilize)
+    utils.verify_param(abort,error_code=400,company_id=company_id)
+    try:
+        if current_page and cow_number:
+            cow_list = Archives.query.filter_by(company_id=company_id).paginate(page=current_page, per_page=cow_number).items
+        else:
+            cow_list=Archives.query.filter_by(company_id=company_id).all()
+    except:
+        abort(502)
+    return json.dumps(cow_list,default=json_serilize)
+
+
+@app.route('/api/verify_cow_exists', methods=['POST'])
+@auth.login_required
+def verify_cow_exists():
+    user_id = g.user.userid
+    company_id = request.json.get('companyid')
+    rfid_code = request.json.get('rfidcode')
+
+    utils.verify_param(abort,error_code=400,user_id=user_id,company_id=company_id,rfid_code=rfid_code)
+    if Archives.query.filter_by(rfid_code=rfid_code,company_id=company_id).first():
+        result=True
+    else:
+        result=False
+    return jsonify({
+        'userid': user_id,
+        'companyid': company_id,
+        'rfid_code':rfid_code,
+        'result':result
+    })
 
 
 # the main entry when using flask only, of course you should use uwsgi instead in deploy environment.

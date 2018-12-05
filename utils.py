@@ -3,7 +3,6 @@ import glob
 import os
 from werkzeug.utils import secure_filename
 
-
 def get_files(path, top):
     """get the jpg files under the path"""
     if os.path.isdir(path):
@@ -78,12 +77,18 @@ def process_video_to_image(video, folder_path, rfid_code):
     return True
 
 
-def insert_record(db_list, db):
+def insert_record(db_list, db,abort):
     try:
         for db_name in db_list:
             db.session.add(db_name)
         db.session.commit()
     except:
         db.session.rollback()
-        return False
+        abort(502)
+    return True
+
+def verify_param(abort,*args,**kwargs):
+    for key in kwargs:
+        if not kwargs[key]:
+            return abort(kwargs["error_code"],key)
     return True
