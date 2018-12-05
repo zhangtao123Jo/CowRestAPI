@@ -160,6 +160,7 @@ def new_user():
     userid = request.json.get('userid')
     password = request.json.get('password')
     company_id = request.json.get('company_id')
+    # verify the existence of parameters
     utils.verify_param(abort,error_code=400,userid=userid,password=password,company_id=company_id)
     if User.query.filter_by(userid=userid).first() is not None:
         abort(403)  # existing user
@@ -203,7 +204,7 @@ def prospect():
     image_array = request.json.get('items')
     predict_array = []
     cid_array = []
-    # verify that the incoming parameters are null
+    # verify the existence of parameters
     utils.verify_param(abort,error_code=400,user_id=user_id,company_id=company_id,gather_time=gather_time,rfid_code=rfid_code,ip=ip,imei=imei,image_array=image_array)
     for i, item in enumerate(image_array):
         # get the base64 str and decode them to image
@@ -251,7 +252,7 @@ def verify():
         video = request.files['video']
     except:
         video=None
-    #verify that the incoming parameters are null
+    #verify the existence of parameters
     utils.verify_param(abort,error_code=400,user_id=user_id,json_obj=json_obj,company_id=company_id,gather_time=gather_time,rfid_code=rfid_code,ip=ip,imei=imei,video=video)
     # make the save folder path and save the video
     folder_path = os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep
@@ -297,7 +298,7 @@ def verify():
 def cow_list_by_company_id():
     """
      Query the cows of the corresponding company
-    :return:
+    :return: cow_list
     """
     def json_serilize(instance):
         """
