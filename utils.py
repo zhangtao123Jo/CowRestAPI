@@ -78,6 +78,13 @@ def process_video_to_image(video, folder_path, rfid_code):
 
 
 def insert_record(db_list, db,abort):
+    """
+     processing for inserting multiple detabase items
+    :param db_list: list of data to be processed
+    :param db: database
+    :param abort: exception handing
+    :return: exception or True
+    """
     try:
         for db_name in db_list:
             db.session.add(db_name)
@@ -87,7 +94,13 @@ def insert_record(db_list, db,abort):
         abort(502)
     return True
 
-def verify_param(abort,*args,**kwargs):
+def verify_param(abort,**kwargs):
+    """
+     processing of parameter exception
+    :param abort: abort
+    :param kwargs: parameter dict
+    :return: exception or True
+    """
     for key in kwargs:
         if not kwargs[key]:
             return abort(kwargs["error_code"],key)

@@ -70,6 +70,9 @@ class User(db.Model):
 
 
 class LogInfo(db.Model):
+    """
+    The log class
+    """
     __tablename__ = 'log_info'
     log_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     company_id = db.Column(db.String(32))
@@ -80,6 +83,9 @@ class LogInfo(db.Model):
 
 
 class Archives(db.Model):
+    """
+    The archives class
+    """
     __tablename__ = 'archives'
     aid = db.Column(db.Integer, primary_key=True, autoincrement=True)
     rfid_code = db.Column(db.String(32))
@@ -112,7 +118,7 @@ def verify_password(userid_or_token, password):
 
 @app.errorhandler(400)
 def error_400(error):
-    return jsonify({"status":"1x0000","message":"{} param no right".format(error)})
+    return jsonify({"status":"1x0000","message":"{} param not right".format(error.description)})
 
 
 @app.errorhandler(403)
@@ -197,6 +203,7 @@ def prospect():
     image_array = request.json.get('items')
     predict_array = []
     cid_array = []
+    # verify that the incoming parameters are null
     utils.verify_param(abort,error_code=400,user_id=user_id,company_id=company_id,gather_time=gather_time,rfid_code=rfid_code,ip=ip,imei=imei,image_array=image_array)
     for i, item in enumerate(image_array):
         # get the base64 str and decode them to image
@@ -244,6 +251,7 @@ def verify():
         video = request.files['video']
     except:
         video=None
+    #verify that the incoming parameters are null
     utils.verify_param(abort,error_code=400,user_id=user_id,json_obj=json_obj,company_id=company_id,gather_time=gather_time,rfid_code=rfid_code,ip=ip,imei=imei,video=video)
     # make the save folder path and save the video
     folder_path = os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep
@@ -255,7 +263,6 @@ def verify():
     executor.submit(utils.process_video_to_image, video,
                     os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep, rfid_code)
 
-    # TODO: for zhangtao
     # give the age value, 0 for default now.
     age = 0  # json_obj.get("age")
     # give the health_status value, 1 for default now.
@@ -264,15 +271,15 @@ def verify():
     if Archives.query.filter_by(rfid_code=rfid_code).first():
         abort(403)
     else:
+        # assign values to database fields
         archives = Archives(rfid_code=rfid_code, age=age, company_id=company_id, gather_time=gather_time,
                             health_status=health_status,
                             folder_path=os.path.join(app.config.base_images_path, company_id, rfid_code),
                             extra_info='file name is : ' + video.filename)
-
-        # log the submit info to the db
         li = LogInfo(company_id=company_id, rfid_code=rfid_code, remote_ip=ip, imei=imei,
                      extra_info='file name is : ' + video.filename)
         db_list = [archives, li]
+        #log the submit info to the db
         utils.insert_record(db_list, db,abort)
         return jsonify({
             'userid': user_id,
@@ -288,7 +295,16 @@ def verify():
 @app.route('/api/list', methods=['POST'])
 @auth.login_required
 def cow_list_by_company_id():
+    """
+     Query the cows of the corresponding company
+    :return:
+    """
     def json_serilize(instance):
+        """
+         change the returned data to dict
+        :param instance: data
+        :return:
+        """
         return {
             "aid": instance.aid,
             "rfid_code": instance.rfid_code,
@@ -304,9 +320,11 @@ def cow_list_by_company_id():
     company_id = request.json.get("companyid")
     utils.verify_param(abort,error_code=400,company_id=company_id)
     try:
+        #get a list of cowrest based on the current page number and display number
         if current_page and cow_number:
             cow_list = Archives.query.filter_by(company_id=company_id).paginate(page=current_page, per_page=cow_number).items
         else:
+            # return all cows list without current page or display number
             cow_list=Archives.query.filter_by(company_id=company_id).all()
     except:
         abort(502)
@@ -316,6 +334,10 @@ def cow_list_by_company_id():
 @app.route('/api/verify_cow_exists', methods=['POST'])
 @auth.login_required
 def verify_cow_exists():
+    """
+     verify the existence of cows
+    :return:
+    """
     user_id = g.user.userid
     company_id = request.json.get('companyid')
     rfid_code = request.json.get('rfidcode')
