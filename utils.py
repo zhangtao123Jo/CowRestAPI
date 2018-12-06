@@ -97,7 +97,7 @@ def insert_record(db_list, db,abort):
 def verify_param(abort,**kwargs):
     """
      processing of parameter exception
-    :param abort: abort
+    :param abort:
     :param kwargs: parameter dict
     :return: exception or True
     """

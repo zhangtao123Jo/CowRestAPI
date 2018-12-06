@@ -22,10 +22,12 @@ executor = ThreadPoolExecutor(4)
 # initialization
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'the beijing telecom research center'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+app.config['SQLALCHEMY_DATABASE_URI']='mysql+mysqlconnector://root:123456@localhost:3306/cowrest'
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-app.config.base_images_path = 'f:/test_flask'
+# app.config.base_images_path = 'f:/test_flask'
+app.config.base_images_path = 'd:/cowrest_test'
 
 # extensions
 db = SQLAlchemy(app)
@@ -252,26 +254,25 @@ def verify():
         video = request.files['video']
     except:
         video=None
-    #verify the existence of parameters
-    utils.verify_param(abort,error_code=400,user_id=user_id,json_obj=json_obj,company_id=company_id,gather_time=gather_time,rfid_code=rfid_code,ip=ip,imei=imei,video=video)
-    # make the save folder path and save the video
-    folder_path = os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-    video.save(folder_path + utils.secure_filename(video.filename))
-
-    # make async execution thread for the video save and frame grabber
-    executor.submit(utils.process_video_to_image, video,
-                    os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep, rfid_code)
-
     # give the age value, 0 for default now.
     age = 0  # json_obj.get("age")
     # give the health_status value, 1 for default now.
     health_status = '1'  # json_obj.get("health_status")
+    #verify the existence of parameters
+    utils.verify_param(abort,error_code=400,user_id=user_id,json_obj=json_obj,company_id=company_id,gather_time=gather_time,rfid_code=rfid_code,ip=ip,imei=imei,video=video,age=age,health_status=health_status)
 
     if Archives.query.filter_by(rfid_code=rfid_code).first():
         abort(403)
     else:
+        # make the save folder path and save the video
+        folder_path = os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+        video.save(folder_path + utils.secure_filename(video.filename))
+
+        # make async execution thread for the video save and frame grabber
+        executor.submit(utils.process_video_to_image, video,
+                        os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep, rfid_code)
         # assign values to database fields
         archives = Archives(rfid_code=rfid_code, age=age, company_id=company_id, gather_time=gather_time,
                             health_status=health_status,
@@ -327,9 +328,9 @@ def cow_list_by_company_id():
         else:
             # return all cows list without current page or display number
             cow_list=Archives.query.filter_by(company_id=company_id).all()
+        return json.dumps(cow_list, default=json_serilize)
     except:
         abort(502)
-    return json.dumps(cow_list,default=json_serilize)
 
 
 @app.route('/api/verify_cow_exists', methods=['POST'])
