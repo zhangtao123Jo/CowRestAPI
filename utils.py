@@ -102,6 +102,6 @@ def verify_param(abort,**kwargs):
     :return: exception or True
     """
     for key in kwargs:
-        if not kwargs[key]:
+        if kwargs[key] is None or kwargs[key] == " ":
             return abort(kwargs["error_code"],key)
     return True

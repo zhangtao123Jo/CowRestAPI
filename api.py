@@ -22,10 +22,12 @@ executor = ThreadPoolExecutor(4)
 # initialization
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'the beijing telecom research center'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+app.config['SQLALCHEMY_DATABASE_URI']='mysql+mysqlconnector://root:123456@localhost:3306/cowrest'
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-app.config.base_images_path = 'f:/test_flask'
+# app.config.base_images_path = 'f:/test_flask'
+app.config.base_images_path = 'd:/cowrest_test'
 
 # extensions
 db = SQLAlchemy(app)
@@ -179,7 +181,6 @@ def get_user(userid):
     :param userid:
     :return:
     """
-
     user = User.query.get(userid)
     utils.verify_param(abort,error_code=502,user=user)
     return jsonify({'username': user.userid})
