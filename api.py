@@ -22,12 +22,10 @@ executor = ThreadPoolExecutor(4)
 # initialization
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'the beijing telecom research center'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
-app.config['SQLALCHEMY_DATABASE_URI']='mysql+mysqlconnector://root:123456@localhost:3306/cowrest'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-# app.config.base_images_path = 'f:/test_flask'
-app.config.base_images_path = 'd:/cowrest_test'
+app.config.base_images_path = 'f:/test_flask'
 
 # extensions
 db = SQLAlchemy(app)
@@ -230,7 +228,7 @@ def prospect():
         'userid': user_id,
         'companyid': company_id,
         'resoult': 1,
-        'gather_time': gather_time,
+        'gathertime': gather_time,
         'percent': result,
         'verinfo': 'test',
         'ip': ip,
@@ -287,7 +285,7 @@ def verify():
             'userid': user_id,
             'companyid': company_id,
             'resoult': True,
-            'gather_time': gather_time,
+            'gathertime': gather_time,
             'verinfo': 'jobs was launched in background',
             'ip': ip,
             'imei': imei,
@@ -308,6 +306,7 @@ def cow_list_by_company_id():
         :return:
         """
         return {
+            "userid":g.user.userid,
             "aid": instance.aid,
             "rfid_code": instance.rfid_code,
             "age": instance.age,
