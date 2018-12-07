@@ -10,3 +10,4 @@ MarkupSafe
 passlib
 SQLAlchemy
 Werkzeug
+opencv-python
