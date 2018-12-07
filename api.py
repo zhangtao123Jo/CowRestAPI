@@ -130,7 +130,6 @@ def verify_password(userid_or_token, password):
 ################################################
 
 
-
 @app.errorhandler(400)
 def error_400(error):
     """
@@ -138,7 +137,7 @@ def error_400(error):
     :param error: error message
     :return: exception message
     """
-    return jsonify({"status":"1x0000","message":"{} param not right".format(error.description)})
+    return jsonify({"status": "1x0000", "message": "{} param not right".format(error.description)})
 
 
 @app.errorhandler(403)
@@ -148,7 +147,7 @@ def error_403(error):
     :param error:
     :return: exception message
     """
-    return jsonify({"status":"5x0001","message":"Data already exists"})
+    return jsonify({"status": "5x0001", "message": "Data already exists"})
 
 
 @app.errorhandler(404)
@@ -173,7 +172,7 @@ def error_502(error):
     :param error:
     :return: exception message
     """
-    return jsonify({"status":"3x0000","message":"database operation error"})
+    return jsonify({"status": "3x0000", "message": "database operation error"})
 
 
 ###############################################
@@ -191,7 +190,7 @@ def new_user():
     password = request.json.get('password')
     company_id = request.json.get('company_id')
     # verify the existence of parameters
-    utils.verify_param(abort,error_code=400,userid=userid,password=password,company_id=company_id)
+    utils.verify_param(abort, error_code=400, userid=userid, password=password, company_id=company_id)
     if User.query.filter_by(userid=userid).first() is not None:
         abort(403)  # existing user
     user = User(userid=userid, company_id=company_id)
@@ -210,7 +209,7 @@ def get_user(userid):
     :return: userid
     """
     user = User.query.get(userid)
-    utils.verify_param(abort,error_code=502,user=user)
+    utils.verify_param(abort, error_code=502, user=user)
     return jsonify({'userid': user.userid})
 
 
@@ -242,7 +241,8 @@ def prospect():
     predict_array = []
     cid_array = []
     # verify the existence of parameters
-    utils.verify_param(abort,error_code=400,user_id=user_id,company_id=company_id,gather_time=gather_time,rfid_code=rfid_code,ip=ip,imei=imei,image_array=image_array)
+    utils.verify_param(abort, error_code=400, user_id=user_id, company_id=company_id, gather_time=gather_time,
+                       rfid_code=rfid_code, ip=ip, imei=imei, image_array=image_array)
     for i, item in enumerate(image_array):
         # get the base64 str and decode them to image
         img_base64 = item.get('cvalue')
@@ -292,13 +292,15 @@ def verify():
     try:
         video = request.files['video']
     except:
-        video=None
+        video = None
     # give the age value, 0 for default now.
     age = 0  # json_obj.get("age")
     # give the health_status value, 1 for default now.
     health_status = '1'  # json_obj.get("health_status")
-    #verify the existence of parameters
-    utils.verify_param(abort,error_code=400,user_id=user_id,json_obj=json_obj,company_id=company_id,gather_time=gather_time,rfid_code=rfid_code,ip=ip,imei=imei,video=video,age=age,health_status=health_status)
+    # verify the existence of parameters
+    utils.verify_param(abort, error_code=400, user_id=user_id, json_obj=json_obj, company_id=company_id,
+                       gather_time=gather_time, rfid_code=rfid_code, ip=ip, imei=imei, video=video, age=age,
+                       health_status=health_status)
     # judge the existence of cow
     if Archives.query.filter_by(rfid_code=rfid_code).first():
         abort(403)
@@ -320,8 +322,8 @@ def verify():
         li = LogInfo(company_id=company_id, rfid_code=rfid_code, remote_ip=ip, imei=imei,
                      extra_info='file name is : ' + video.filename)
         db_list = [archives, li]
-        #log the submit info to the db
-        utils.insert_record(db_list, db,abort)
+        # log the submit info to the db
+        utils.insert_record(db_list, db, abort)
         return jsonify({
             'userid': user_id,
             'companyid': company_id,
@@ -340,6 +342,7 @@ def cow_list_by_company_id():
      Query the cows of the corresponding company
     :return: cow_list
     """
+
     def json_serilize(instance):
         """
          change the returned data to dict
@@ -347,7 +350,7 @@ def cow_list_by_company_id():
         :return: message dict
         """
         return {
-            "userid":g.user.userid,
+            "userid": g.user.userid,
             "aid": instance.aid,
             "rfid_code": instance.rfid_code,
             "age": instance.age,
@@ -357,17 +360,19 @@ def cow_list_by_company_id():
             "extra_info": instance.extra_info,
             "folder_path": instance.folder_path
         }
-    current_page=request.json.get("currentpage")
-    cow_number=request.json.get("cownumber")
+
+    current_page = request.json.get("currentpage")
+    cow_number = request.json.get("cownumber")
     company_id = request.json.get("companyid")
-    utils.verify_param(abort,error_code=400,company_id=company_id)
+    utils.verify_param(abort, error_code=400, company_id=company_id)
     try:
-        #get a list of cowrest based on the current page number and display number
+        # get a list of cowrest based on the current page number and display number
         if current_page and cow_number:
-            cow_list = Archives.query.filter_by(company_id=company_id).paginate(page=current_page, per_page=cow_number).items
+            cow_list = Archives.query.filter_by(company_id=company_id).paginate(page=current_page,
+                                                                                per_page=cow_number).items
         else:
             # return all cows list without current page or display number
-            cow_list=Archives.query.filter_by(company_id=company_id).all()
+            cow_list = Archives.query.filter_by(company_id=company_id).all()
         return json.dumps(cow_list, default=json_serilize)
     except:
         abort(502)
@@ -384,16 +389,16 @@ def verify_cow_exists():
     company_id = request.json.get('companyid')
     rfid_code = request.json.get('rfidcode')
 
-    utils.verify_param(abort,error_code=400,user_id=user_id,company_id=company_id,rfid_code=rfid_code)
-    if Archives.query.filter_by(rfid_code=rfid_code,company_id=company_id).first():
-        result=True
+    utils.verify_param(abort, error_code=400, user_id=user_id, company_id=company_id, rfid_code=rfid_code)
+    if Archives.query.filter_by(rfid_code=rfid_code, company_id=company_id).first():
+        result = True
     else:
-        result=False
+        result = False
     return jsonify({
         'userid': user_id,
         'companyid': company_id,
-        'rfid_code':rfid_code,
-        'result':result
+        'rfid_code': rfid_code,
+        'result': result
     })
 
 
