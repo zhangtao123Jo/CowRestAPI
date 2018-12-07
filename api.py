@@ -22,12 +22,10 @@ executor = ThreadPoolExecutor(4)
 # initialization
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'the beijing telecom research center'
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
-app.config['SQLALCHEMY_DATABASE_URI']='mysql+mysqlconnector://root:123456@localhost:3306/cowrest'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-# app.config.base_images_path = 'f:/test_flask'
-app.config.base_images_path = 'd:/cowrest_test'
+app.config.base_images_path = 'f:/test_flask'
 
 # extensions
 db = SQLAlchemy(app)
@@ -52,14 +50,29 @@ class User(db.Model):
         self.password_hash = pwd_context.encrypt(password)
 
     def verify_password(self, password):
+        """
+         verify password
+        :param password:
+        :return:
+        """
         return pwd_context.verify(password, self.password_hash)
 
     def generate_auth_token(self, expiration=600):
+        """
+         generate token
+        :param expiration: set expiration time
+        :return:
+        """
         s = Serializer(app.config['SECRET_KEY'], expires_in=expiration)
         return s.dumps({'userid': self.userid})
 
     @staticmethod
     def verify_auth_token(token):
+        """
+         get users by token
+        :param token:
+        :return:
+        """
         s = Serializer(app.config['SECRET_KEY'])
         try:
             data = s.loads(token)
@@ -120,11 +133,21 @@ def verify_password(userid_or_token, password):
 
 @app.errorhandler(400)
 def error_400(error):
+    """
+     verification of input parameters
+    :param error: error message
+    :return: exception message
+    """
     return jsonify({"status":"1x0000","message":"{} param not right".format(error.description)})
 
 
 @app.errorhandler(403)
 def error_403(error):
+    """
+     about data repetition errors
+    :param error:
+    :return: exception message
+    """
     return jsonify({"status":"5x0001","message":"Data already exists"})
 
 
@@ -145,6 +168,11 @@ def error_500(error):
 
 @app.errorhandler(502)
 def error_502(error):
+    """
+     about database operation error
+    :param error:
+    :return: exception message
+    """
     return jsonify({"status":"3x0000","message":"database operation error"})
 
 
@@ -178,17 +206,21 @@ def new_user():
 def get_user(userid):
     """
     Get the user by id.
-    :param userid:
-    :return:
+    :param userid: user ID
+    :return: userid
     """
     user = User.query.get(userid)
     utils.verify_param(abort,error_code=502,user=user)
-    return jsonify({'username': user.userid})
+    return jsonify({'userid': user.userid})
 
 
 @app.route('/api/token')
 @auth.login_required
 def get_auth_token():
+    """
+     get token
+    :return: token message and duration time
+    """
     token = g.user.generate_auth_token(600)
     return jsonify({'token': token.decode('ascii'), 'duration': 600})
 
@@ -196,6 +228,10 @@ def get_auth_token():
 @app.route('/api/prospect', methods=['POST'])
 @auth.login_required
 def prospect():
+    """
+     get the predicted results based on message
+    :return: predicted results and cow information
+    """
     user_id = g.user.userid
     company_id = request.json.get('companyid')
     gather_time = request.json.get('gathertime')
@@ -241,6 +277,10 @@ def prospect():
 @app.route('/api/verify', methods=['POST'])
 @auth.login_required
 def verify():
+    """
+     verify params and save the cow information to the db
+    :return: cow information
+    """
     # get the params first
     user_id = g.user.userid
     json_obj = json.loads(request.form.get('entity'))
@@ -259,7 +299,7 @@ def verify():
     health_status = '1'  # json_obj.get("health_status")
     #verify the existence of parameters
     utils.verify_param(abort,error_code=400,user_id=user_id,json_obj=json_obj,company_id=company_id,gather_time=gather_time,rfid_code=rfid_code,ip=ip,imei=imei,video=video,age=age,health_status=health_status)
-
+    # judge the existence of cow
     if Archives.query.filter_by(rfid_code=rfid_code).first():
         abort(403)
     else:
@@ -304,7 +344,7 @@ def cow_list_by_company_id():
         """
          change the returned data to dict
         :param instance: data
-        :return:
+        :return: message dict
         """
         return {
             "userid":g.user.userid,
@@ -337,7 +377,7 @@ def cow_list_by_company_id():
 @auth.login_required
 def verify_cow_exists():
     """
-     verify the existence of cows
+     verify the existence of cow
     :return:
     """
     user_id = g.user.userid
