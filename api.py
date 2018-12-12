@@ -50,14 +50,29 @@ class User(db.Model):
         self.password_hash = pwd_context.encrypt(password)
 
     def verify_password(self, password):
+        """
+         verify password
+        :param password:
+        :return:
+        """
         return pwd_context.verify(password, self.password_hash)
 
     def generate_auth_token(self, expiration=600):
+        """
+         generate token
+        :param expiration: set expiration time
+        :return:
+        """
         s = Serializer(app.config['SECRET_KEY'], expires_in=expiration)
         return s.dumps({'userid': self.userid})
 
     @staticmethod
     def verify_auth_token(token):
+        """
+         get users by token
+        :param token:
+        :return:
+        """
         s = Serializer(app.config['SECRET_KEY'])
         try:
             data = s.loads(token)
@@ -70,6 +85,9 @@ class User(db.Model):
 
 
 class LogInfo(db.Model):
+    """
+    The log class
+    """
     __tablename__ = 'log_info'
     log_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     company_id = db.Column(db.String(32))
@@ -78,14 +96,20 @@ class LogInfo(db.Model):
     imei = db.Column(db.String(64))
     extra_info = db.Column(db.String(64), nullable=True)
 
-    def insert_record(self):
-        try:
-            db.session.add(self)
-            db.session.commit()
-        except:
-            db.session.rollback()
-            return False
-        return True
+
+class Archives(db.Model):
+    """
+    The archives class
+    """
+    __tablename__ = 'archives'
+    aid = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    rfid_code = db.Column(db.String(32))
+    age = db.Column(db.Integer)
+    company_id = db.Column(db.String(32))
+    gather_time = db.Column(db.String(32))
+    folder_path = db.Column(db.String(200))
+    health_status = db.Column(db.String(32))
+    extra_info = db.Column(db.String(64), nullable=True)
 
 
 @auth.verify_password
@@ -106,6 +130,26 @@ def verify_password(userid_or_token, password):
 ################################################
 
 
+@app.errorhandler(400)
+def error_400(error):
+    """
+     verification of input parameters
+    :param error: error message
+    :return: exception message
+    """
+    return jsonify({"status": "1x0000", "message": "{} param not right".format(error.description)})
+
+
+@app.errorhandler(403)
+def error_403(error):
+    """
+     about data repetition errors
+    :param error:
+    :return: exception message
+    """
+    return jsonify({"status": "5x0001", "message": "Data already exists"})
+
+
 @app.errorhandler(404)
 def error_404(error):
     return str(error)
@@ -121,9 +165,19 @@ def error_500(error):
     return str(error)
 
 
-################################################
+@app.errorhandler(502)
+def error_502(error):
+    """
+     about database operation error
+    :param error:
+    :return: exception message
+    """
+    return jsonify({"status": "3x0000", "message": "database operation error"})
+
+
+###############################################
 # Route Handling
-################################################
+###############################################
 
 
 @app.route('/api/add_user', methods=['POST'])
@@ -135,10 +189,10 @@ def new_user():
     userid = request.json.get('userid')
     password = request.json.get('password')
     company_id = request.json.get('company_id')
-    if userid is None or password is None or company_id is None:
-        abort(400)  # missing arguments
+    # verify the existence of parameters
+    utils.verify_param(abort, error_code=400, userid=userid, password=password, company_id=company_id)
     if User.query.filter_by(userid=userid).first() is not None:
-        abort(400)  # existing user
+        abort(403)  # existing user
     user = User(userid=userid, company_id=company_id)
     user.hash_password(password)
     db.session.add(user)
@@ -148,21 +202,24 @@ def new_user():
 
 
 @app.route('/api/users/<int:userid>')
-def get_user(id):
+def get_user(userid):
     """
     Get the user by id.
-    :param id:
-    :return:
+    :param userid: user ID
+    :return: userid
     """
-    user = User.query.get(id)
-    if not user:
-        abort(400)
-    return jsonify({'username': user.username})
+    user = User.query.get(userid)
+    utils.verify_param(abort, error_code=502, user=user)
+    return jsonify({'userid': user.userid})
 
 
 @app.route('/api/token')
 @auth.login_required
 def get_auth_token():
+    """
+     get token
+    :return: token message and duration time
+    """
     token = g.user.generate_auth_token(600)
     return jsonify({'token': token.decode('ascii'), 'duration': 600})
 
@@ -170,6 +227,10 @@ def get_auth_token():
 @app.route('/api/prospect', methods=['POST'])
 @auth.login_required
 def prospect():
+    """
+     get the predicted results based on message
+    :return: predicted results and cow information
+    """
     user_id = g.user.userid
     company_id = request.json.get('companyid')
     gather_time = request.json.get('gathertime')
@@ -179,6 +240,9 @@ def prospect():
     image_array = request.json.get('items')
     predict_array = []
     cid_array = []
+    # verify the existence of parameters
+    utils.verify_param(abort, error_code=400, user_id=user_id, company_id=company_id, gather_time=gather_time,
+                       rfid_code=rfid_code, ip=ip, imei=imei, image_array=image_array)
     for i, item in enumerate(image_array):
         # get the base64 str and decode them to image
         img_base64 = item.get('cvalue')
@@ -201,7 +265,7 @@ def prospect():
         'userid': user_id,
         'companyid': company_id,
         'resoult': 1,
-        'gather_time': gather_time,
+        'gathertime': gather_time,
         'percent': result,
         'verinfo': 'test',
         'ip': ip,
@@ -213,6 +277,10 @@ def prospect():
 @app.route('/api/verify', methods=['POST'])
 @auth.login_required
 def verify():
+    """
+     verify params and save the cow information to the db
+    :return: cow information
+    """
     # get the params first
     user_id = g.user.userid
     json_obj = json.loads(request.form.get('entity'))
@@ -221,23 +289,116 @@ def verify():
     rfid_code = json_obj.get('rfidcode')
     ip = json_obj.get('ip')
     imei = json_obj.get('imei')
-    video = request.files['video']
-    # make async execution thread for the video save and frame grabber
-    executor.submit(utils.process_video_to_image, video,
-                    os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep, rfid_code)
-    # log the submit info to the db
-    li = LogInfo(company_id=company_id, rfid_code=rfid_code, remote_ip=ip, imei=imei,
-                 extra_info='file name is : ' + video.filename)
-    li.insert_record()
+    try:
+        video = request.files['video']
+    except:
+        video = None
+    # give the age value, 0 for default now.
+    age = 0  # json_obj.get("age")
+    # give the health_status value, 1 for default now.
+    health_status = '1'  # json_obj.get("health_status")
+    # verify the existence of parameters
+    utils.verify_param(abort, error_code=400, user_id=user_id, json_obj=json_obj, company_id=company_id,
+                       gather_time=gather_time, rfid_code=rfid_code, ip=ip, imei=imei, video=video, age=age,
+                       health_status=health_status)
+    # judge the existence of cow
+    if Archives.query.filter_by(rfid_code=rfid_code).first():
+        abort(403)
+    else:
+        # make the save folder path and save the video
+        folder_path = os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+        video.save(folder_path + utils.secure_filename(video.filename))
 
+        # make async execution thread for the video save and frame grabber
+        executor.submit(utils.process_video_to_image, video,
+                        os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep, rfid_code)
+        # assign values to database fields
+        archives = Archives(rfid_code=rfid_code, age=age, company_id=company_id, gather_time=gather_time,
+                            health_status=health_status,
+                            folder_path=os.path.join(app.config.base_images_path, company_id, rfid_code),
+                            extra_info='file name is : ' + video.filename)
+        li = LogInfo(company_id=company_id, rfid_code=rfid_code, remote_ip=ip, imei=imei,
+                     extra_info='file name is : ' + video.filename)
+        db_list = [archives, li]
+        # log the submit info to the db
+        utils.insert_record(db_list, db, abort)
+        return jsonify({
+            'userid': user_id,
+            'companyid': company_id,
+            'resoult': True,
+            'gathertime': gather_time,
+            'verinfo': 'jobs was launched in background',
+            'ip': ip,
+            'imei': imei,
+        })
+
+
+@app.route('/api/list', methods=['POST'])
+@auth.login_required
+def cow_list_by_company_id():
+    """
+     Query the cows of the corresponding company
+    :return: cow_list
+    """
+
+    def json_serilize(instance):
+        """
+         change the returned data to dict
+        :param instance: data
+        :return: message dict
+        """
+        return {
+            "userid": g.user.userid,
+            "aid": instance.aid,
+            "rfid_code": instance.rfid_code,
+            "age": instance.age,
+            "company_id": instance.company_id,
+            "gather_time": instance.gather_time,
+            "health_status": instance.health_status,
+            "extra_info": instance.extra_info,
+            "folder_path": instance.folder_path
+        }
+
+    current_page = request.json.get("currentpage")
+    cow_number = request.json.get("cownumber")
+    company_id = request.json.get("companyid")
+    utils.verify_param(abort, error_code=400, company_id=company_id)
+    try:
+        # get a list of cowrest based on the current page number and display number
+        if current_page and cow_number:
+            cow_list = Archives.query.filter_by(company_id=company_id).paginate(page=current_page,
+                                                                                per_page=cow_number).items
+        else:
+            # return all cows list without current page or display number
+            cow_list = Archives.query.filter_by(company_id=company_id).all()
+        return json.dumps(cow_list, default=json_serilize)
+    except:
+        abort(502)
+
+
+@app.route('/api/verify_cow_exists', methods=['POST'])
+@auth.login_required
+def verify_cow_exists():
+    """
+     verify the existence of cow
+    :return:
+    """
+    user_id = g.user.userid
+    company_id = request.json.get('companyid')
+    rfid_code = request.json.get('rfidcode')
+
+    utils.verify_param(abort, error_code=400, user_id=user_id, company_id=company_id, rfid_code=rfid_code)
+    if Archives.query.filter_by(rfid_code=rfid_code, company_id=company_id).first():
+        result = True
+    else:
+        result = False
     return jsonify({
         'userid': user_id,
         'companyid': company_id,
-        'resoult': True,
-        'gather_time': gather_time,
-        'verinfo': 'jobs was launched in background',
-        'ip': ip,
-        'imei': imei,
+        'rfid_code': rfid_code,
+        'result': result
     })
 
 

@@ -3,7 +3,6 @@ import glob
 import os
 from werkzeug.utils import secure_filename
 
-
 def get_files(path, top):
     """get the jpg files under the path"""
     if os.path.isdir(path):
@@ -61,18 +60,48 @@ def process_video_to_image(video, folder_path, rfid_code):
     :return:
     """
     try:
-        video.save(folder_path + secure_filename(video.filename))
         import cv2
         vid_cap = cv2.VideoCapture(folder_path + secure_filename(video.filename))
         success, image = vid_cap.read()
         count = 0
         while success:
             vid_cap.set(cv2.CAP_PROP_POS_MSEC, 0.5 * 1000 * count)
-            cv2.imwrite(folder_path + rfid_code + "_" + str(count) + "_" + "1" + ".jpg", image)  # save frame as JPEG file
+            cv2.imwrite(folder_path + rfid_code + "_" + str(count) + "_" + "1" + ".jpg",
+                        image)  # save frame as JPEG file
             success, image = vid_cap.read()
             count += 1
         print('Total frames: ', count)
     except:
         print("error")
         return False
+    return True
+
+
+def insert_record(db_list, db,abort):
+    """
+     processing for inserting multiple detabase items
+    :param db_list: list of data to be processed
+    :param db: database
+    :param abort: exception handing
+    :return: exception or True
+    """
+    try:
+        for db_name in db_list:
+            db.session.add(db_name)
+        db.session.commit()
+    except:
+        db.session.rollback()
+        abort(502)
+    return True
+
+def verify_param(abort,**kwargs):
+    """
+     processing of parameter exception
+    :param abort: exception keyword
+    :param kwargs: parameter dict
+    :return: exception or True
+    """
+    for key in kwargs:
+        if kwargs[key] is None or kwargs[key] == " ":
+            return abort(kwargs["error_code"],key)
     return True
