@@ -14,6 +14,4 @@ Werkzeug
 opencv-python
 keras
 sklearn
-datetime
-json
 tensorflow
