@@ -1,7 +1,9 @@
 import base64
 import glob
 import os
+from inference import Inference
 from werkzeug.utils import secure_filename
+
 
 def get_files(path, top):
     """get the jpg files under the path"""
@@ -25,6 +27,15 @@ def get_dir_imgs_number(dir_path):
     return number
 
 
+def max_list(lt):
+    temp = 0
+    for i in lt:
+        if lt.count(i) > temp:
+            max_str = i
+            temp = lt.count(i)
+    return max_str
+
+
 def get_predicted_result(predict_images, cid_array):
     """
     TODO: Give the predict here.
@@ -32,7 +43,22 @@ def get_predicted_result(predict_images, cid_array):
     :param cid_array: the oriented type, left center or right : 0,1,2
     :return:
     """
-    return True
+    infer = Inference()
+    results = infer.predict(predict_images)
+    new_results = []
+    new_results1 = []
+    for i in results:
+        i.sort(reverse=True, key=lambda j: float(j.split(":")[1]))
+        new_results.append(i[0].split(":")[0])
+        new_results1.append(i[0])
+    max_results = max_list(new_results)
+    sum = 0
+    num = new_results.count(max_results)
+    for rid in new_results1:
+        if rid.split(":")[0] == max_results:
+            sum = sum + float(rid.split(":")[1])
+    end_result = "{}%".format(round(sum / num, 2))
+    return end_result, max_results
 
 
 def read_image_to_base64(target_images):
@@ -77,7 +103,7 @@ def process_video_to_image(video, folder_path, rfid_code):
     return True
 
 
-def insert_record(db_list, db,abort):
+def insert_record(db_list, db, abort):
     """
      processing for inserting multiple detabase items
     :param db_list: list of data to be processed
@@ -94,7 +120,8 @@ def insert_record(db_list, db,abort):
         abort(502)
     return True
 
-def verify_param(abort,**kwargs):
+
+def verify_param(abort, **kwargs):
     """
      processing of parameter exception
     :param abort: exception keyword
@@ -102,6 +129,6 @@ def verify_param(abort,**kwargs):
     :return: exception or True
     """
     for key in kwargs:
-        if kwargs[key] is None or kwargs[key] == " ":
-            return abort(kwargs["error_code"],key)
+        if kwargs[key] is None or kwargs[key] == "":
+            return abort(kwargs["error_code"], key)
     return True

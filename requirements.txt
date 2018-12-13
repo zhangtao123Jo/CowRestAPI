@@ -12,3 +12,7 @@ passlib
 SQLAlchemy
 Werkzeug
 opencv-python
+keras
+sklearn
+datetime
+json

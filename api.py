@@ -13,6 +13,8 @@ from PIL import Image
 from io import BytesIO
 import utils
 import json
+import config
+import datetime
 
 # DOCS https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
 from concurrent.futures import ThreadPoolExecutor
@@ -21,11 +23,7 @@ executor = ThreadPoolExecutor(4)
 
 # initialization
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'the beijing telecom research center'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
-app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-app.config.base_images_path = 'f:/test_flask'
+app.config.from_object("config")
 
 # extensions
 db = SQLAlchemy(app)
@@ -39,7 +37,7 @@ class User(db.Model):
     __tablename__ = 'users'
     userid = db.Column(db.Integer, primary_key=True)
     company_id = db.Column(db.String(32), index=True)
-    password_hash = db.Column(db.String(64))
+    password_hash = db.Column(db.String(120))
 
     def hash_password(self, password):
         """
@@ -63,7 +61,7 @@ class User(db.Model):
         :param expiration: set expiration time
         :return:
         """
-        s = Serializer(app.config['SECRET_KEY'], expires_in=expiration)
+        s = Serializer(config.SECRET_KEY, expires_in=expiration)
         return s.dumps({'userid': self.userid})
 
     @staticmethod
@@ -73,7 +71,7 @@ class User(db.Model):
         :param token:
         :return:
         """
-        s = Serializer(app.config['SECRET_KEY'])
+        s = Serializer(config.SECRET_KEY)
         try:
             data = s.loads(token)
         except SignatureExpired:
@@ -106,7 +104,7 @@ class Archives(db.Model):
     rfid_code = db.Column(db.String(32))
     age = db.Column(db.Integer)
     company_id = db.Column(db.String(32))
-    gather_time = db.Column(db.String(32))
+    gather_time = db.Column(db.DateTime)
     folder_path = db.Column(db.String(200))
     health_status = db.Column(db.String(32))
     extra_info = db.Column(db.String(64), nullable=True)
@@ -251,22 +249,29 @@ def prospect():
         img_base64 = img_base64[starter + 1:]
         bytes_buffer = BytesIO(base64.b64decode(img_base64))
         # get one for pillow and another for
-        img_pillow = Image.open(bytes_buffer)
+        img_pillow = Image.open(r"D:\cowrest_test\asd\3\3182.jpg")
         img_cv2 = cv2.imdecode(numpy.frombuffer(bytes_buffer.getvalue(), numpy.uint8), cv2.IMREAD_COLOR)
-        predict_array.append(img_pillow)
+        img_cv2 = cv2.resize(img_cv2, config.img_size)
+        predict_array.append(img_cv2)
         cid_array.append(img_oriented)
 
-    # get the previous registered images top3 and encode them to base64
-    pre_files = utils.get_files(os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep, 3)
-    pre_items = utils.read_image_to_base64(pre_files)
     # get the predicted results and returned
-    result = utils.get_predicted_result(predict_array, cid_array)
+    result, predict_code = utils.get_predicted_result(predict_array, cid_array)
+    if rfid_code == predict_code and result >= config.min_predict:
+        resoult = 1
+    else:
+        resoult = 0
+
+    # get the previous registered images top3 and encode them to base64
+    pre_files = utils.get_files(os.path.join(config.base_images_path, company_id, predict_code) + os.sep, 3)
+    pre_items = utils.read_image_to_base64(pre_files)
+
     return jsonify({
         'userid': user_id,
         'companyid': company_id,
-        'resoult': 1,
+        'resoult': resoult,
         'gathertime': gather_time,
-        'percent': result,
+        'percent': "predict_code:{},percent:{}".format(predict_code, result),
         'verinfo': 'test',
         'ip': ip,
         'imei': imei,
@@ -285,7 +290,11 @@ def verify():
     user_id = g.user.userid
     json_obj = json.loads(request.form.get('entity'))
     company_id = json_obj.get('companyid')
-    gather_time = json_obj.get('gathertime')
+    gather_time1 = json_obj.get('gathertime')
+    try:
+        gather_time = datetime.datetime.strptime(gather_time1, "%Y/%m/%d %H:%M:%S")
+    except:
+        gather_time = gather_time1
     rfid_code = json_obj.get('rfidcode')
     ip = json_obj.get('ip')
     imei = json_obj.get('imei')
@@ -306,18 +315,18 @@ def verify():
         abort(403)
     else:
         # make the save folder path and save the video
-        folder_path = os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep
+        folder_path = os.path.join(config.base_images_path, company_id, rfid_code) + os.sep
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
         video.save(folder_path + utils.secure_filename(video.filename))
 
         # make async execution thread for the video save and frame grabber
         executor.submit(utils.process_video_to_image, video,
-                        os.path.join(app.config.base_images_path, company_id, rfid_code) + os.sep, rfid_code)
+                        os.path.join(config.base_images_path, company_id, rfid_code) + os.sep, rfid_code)
         # assign values to database fields
         archives = Archives(rfid_code=rfid_code, age=age, company_id=company_id, gather_time=gather_time,
                             health_status=health_status,
-                            folder_path=os.path.join(app.config.base_images_path, company_id, rfid_code),
+                            folder_path=os.path.join(config.base_images_path, company_id, rfid_code),
                             extra_info='file name is : ' + video.filename)
         li = LogInfo(company_id=company_id, rfid_code=rfid_code, remote_ip=ip, imei=imei,
                      extra_info='file name is : ' + video.filename)
@@ -328,7 +337,7 @@ def verify():
             'userid': user_id,
             'companyid': company_id,
             'resoult': True,
-            'gathertime': gather_time,
+            'gathertime': str(gather_time),
             'verinfo': 'jobs was launched in background',
             'ip': ip,
             'imei': imei,
@@ -402,6 +411,7 @@ def verify_cow_exists():
     })
 
 
+db.create_all()
 # the main entry when using flask only, of course you should use uwsgi instead in deploy environment.
 if __name__ == '__main__':
     if not os.path.exists('db.sqlite'):
