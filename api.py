@@ -411,7 +411,6 @@ def verify_cow_exists():
     })
 
 
-db.create_all()
 # the main entry when using flask only, of course you should use uwsgi instead in deploy environment.
 if __name__ == '__main__':
     if not os.path.exists('db.sqlite'):
