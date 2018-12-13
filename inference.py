@@ -1,10 +1,11 @@
 import numpy as np
 import importlib
 import config
+import os
 from sklearn.externals import joblib
 from keras import backend as K
 from keras.applications.inception_v3 import InceptionV3 as KerasInceptionV3
-from keras.layers import GlobalAveragePooling2D, Dense, Dropout, Input, Embedding, Lambda
+from keras.layers import GlobalAveragePooling2D, Dense, Input, Embedding, Lambda
 from keras.models import Model
 
 
@@ -37,7 +38,7 @@ class Inference(object):
         return module.inst_class(*args, **kwargs)
 
     def load_classes(self):
-        config.classes = joblib.load(r"D:\CowRestAPI\trained\classes-inception_v3")
+        config.classes = joblib.load(os.path.join(os.getcwd(), r"trained\classes-inception_v3"))
 
     def get_keras_backend_name(self):
         try:
@@ -93,4 +94,5 @@ class Inference(object):
 
     def load_model(self):
         print("Loading model")
-        Inference.loaded_model.load_weights(r"D:\CowRestAPI\trained\fine-tuned-best-inception_v3-weights.h5")
+        Inference.loaded_model.load_weights(
+            os.path.join(os.getcwd(), r"trained\fine-tuned-best-inception_v3-weights.h5"))
