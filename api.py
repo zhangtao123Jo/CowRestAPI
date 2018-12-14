@@ -249,7 +249,7 @@ def prospect():
         img_base64 = img_base64[starter + 1:]
         bytes_buffer = BytesIO(base64.b64decode(img_base64))
         # get one for pillow and another for
-        img_pillow = Image.open(r"D:\cowrest_test\asd\3\3182.jpg")
+        # img_pillow = Image.open(r"D:\cowrest_test\asd\3\3182.jpg")
         img_cv2 = cv2.imdecode(numpy.frombuffer(bytes_buffer.getvalue(), numpy.uint8), cv2.IMREAD_COLOR)
         img_cv2 = cv2.resize(img_cv2, config.img_size)
         predict_array.append(img_cv2)
