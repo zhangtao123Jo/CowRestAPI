@@ -38,7 +38,7 @@ class Inference(object):
         return module.inst_class(*args, **kwargs)
 
     def load_classes(self):
-        config.classes = joblib.load(os.path.join(os.getcwd(), r"trained/classes-inception_v3"))
+        config.classes = joblib.load(os.path.join(os.path.split(os.path.abspath(__file__))[0], r"trained/classes-inception_v3"))
 
     def get_keras_backend_name(self):
         try:
@@ -95,4 +95,4 @@ class Inference(object):
     def load_model(self):
         print("Loading model")
         Inference.loaded_model.load_weights(
-            os.path.join(os.getcwd(), r"trained/fine-tuned-best-inception_v3-weights.h5"))
+            os.path.join(os.path.split(os.path.abspath(__file__))[0], r"trained/fine-tuned-best-inception_v3-weights.h5"))

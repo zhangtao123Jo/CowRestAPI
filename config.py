@@ -1,9 +1,13 @@
+import os
 SECRET_KEY = 'the beijing telecom research center'
 SQLALCHEMY_DATABASE_URI= 'sqlite:///db.sqlite'
 # SQLALCHEMY_DATABASE_URI = 'mysql+mysqlconnector://root:123456@localhost:3306/cowrest'
 SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 SQLALCHEMY_TRACK_MODIFICATIONS = True
-base_images_path = 'f:/test_flask'
+# SQLALCHEMY_POOL_SIZE=5
+# SQLALCHEMY_POOL_TIMEOUT=10
+base_images_path=os.path.join(os.path.split(os.path.abspath(__file__))[0] ,r"test")
+# base_images_path = 'f:/test_flask'
 # base_images_path = 'd:/cowrest_test'
 batch_size = 100
 model = None
