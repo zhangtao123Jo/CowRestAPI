@@ -186,7 +186,7 @@ def new_user():
     """
     userid = request.json.get('userid')
     password = request.json.get('password')
-    company_id = request.json.get('company_id')
+    company_id = request.json.get('companyid')
     # verify the existence of parameters
     utils.verify_param(abort, error_code=400, userid=userid, password=password, company_id=company_id)
     if User.query.filter_by(userid=userid).first() is not None:
