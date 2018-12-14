@@ -22,7 +22,19 @@ class Inference(object):
         self.create_model()
         self.load_model()
 
+    def preprocess_input(self, i):
+        a = []
+        for x in i:
+            x /= 255.
+            x -= 0.5
+            x *= 2
+            a.append(x)
+        return a
+
     def predict(self, predict_images):
+        predict_images = np.array(predict_images)
+        predict_images = predict_images.astype(np.float32)
+        predict_images = self.preprocess_input(predict_images)
         out = Inference.loaded_model.predict(np.array(predict_images))
         results = []
         for pred in out:
@@ -33,12 +45,13 @@ class Inference(object):
             results.append(result)
         return results
 
-    def get_model_class_instance(self, *args, **kwargs):
-        module = importlib.import_module("models.{}".format(Inference.loaded_model))
-        return module.inst_class(*args, **kwargs)
+    # def get_model_class_instance(self, *args, **kwargs):
+    #     module = importlib.import_module("models.{}".format(Inference.loaded_model))
+    #     return module.inst_class(*args, **kwargs)
 
     def load_classes(self):
-        config.classes = joblib.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), r"trained/classes-inception_v3"))
+        config.classes = joblib.load(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), r"trained/classes-inception_v3"))
 
     def get_keras_backend_name(self):
         try:
@@ -95,4 +108,5 @@ class Inference(object):
     def load_model(self):
         print("Loading model")
         Inference.loaded_model.load_weights(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), r"trained/fine-tuned-best-inception_v3-weights.h5"))
+            os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         r"trained/fine-tuned-best-inception_v3-weights.h5"))
