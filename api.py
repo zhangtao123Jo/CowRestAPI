@@ -271,7 +271,7 @@ def prospect():
         'companyid': company_id,
         'resoult': resoult,
         'gathertime': gather_time,
-        'percent': "predict_code:{},percent:{}".format(predict_code, result),
+        'percent': "predict_code:{},percent:{}%".format(predict_code, result),
         'verinfo': 'test',
         'ip': ip,
         'imei': imei,

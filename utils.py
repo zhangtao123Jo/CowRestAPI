@@ -57,7 +57,7 @@ def get_predicted_result(predict_images, cid_array):
     for rid in new_results1:
         if rid.split(":")[0] == max_results:
             sum = sum + float(rid.split(":")[1])
-    end_result = "{}%".format(round(sum / num, 2))
+    end_result = round(sum / num, 2)
     return end_result, max_results
 
 
