@@ -33,7 +33,6 @@ class Inference(object):
 
     def predict(self, predict_images):
         predict_images = np.array(predict_images)
-        predict_images = predict_images.astype(np.float32)
         predict_images = self.preprocess_input(predict_images)
         out = Inference.loaded_model.predict(np.array(predict_images))
         results = []
