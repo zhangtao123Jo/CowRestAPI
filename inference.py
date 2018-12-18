@@ -27,13 +27,11 @@ class Inference(object):
         for x in i:
             x /= 255.
             x -= 0.5
-            x *= 2
+            x *= 2.
             a.append(x)
         return a
 
     def predict(self, predict_images):
-        predict_images = np.array(predict_images)
-        predict_images = predict_images.astype(np.float32)
         predict_images = self.preprocess_input(predict_images)
         out = Inference.loaded_model.predict(np.array(predict_images))
         results = []
