@@ -295,13 +295,17 @@ def verify():
     json_obj = json.loads(request.form.get('entity'))
     company_id = json_obj.get('companyid')
     gather_time1 = json_obj.get('gathertime')
+    rfid_code = json_obj.get('rfidcode')
+    ip = json_obj.get('ip')
+    imei = json_obj.get('imei')
+    xvalue = json_obj.get('xvalue')
+    yvalue = json_obj.get('yvalue')
+    width = json_obj.get('width')
+    height = json_obj.get('height')
     try:
         gather_time = datetime.datetime.strptime(gather_time1, "%Y/%m/%d %H:%M:%S")
     except:
         gather_time = gather_time1
-    rfid_code = json_obj.get('rfidcode')
-    ip = json_obj.get('ip')
-    imei = json_obj.get('imei')
     try:
         video = request.files['video']
     except:
@@ -312,8 +316,8 @@ def verify():
     health_status = '1'  # json_obj.get("health_status")
     # verify the existence of parameters
     utils.verify_param(abort, error_code=400, user_id=user_id, json_obj=json_obj, company_id=company_id,
-                       gather_time=gather_time, rfid_code=rfid_code, ip=ip, imei=imei, video=video, age=age,
-                       health_status=health_status)
+                       gather_time=gather_time, rfid_code=rfid_code, ip=ip, imei=imei, xvalue=xvalue,
+                       yvalue=yvalue, width=width, height=height, video=video, age=age, health_status=health_status)
     # judge the existence of cow
     if Archives.query.filter_by(rfid_code=rfid_code).first():
         abort(403)
@@ -326,7 +330,8 @@ def verify():
 
         # make async execution thread for the video save and frame grabber
         executor.submit(utils.process_video_to_image, video,
-                        os.path.join(config.base_images_path, company_id, rfid_code) + os.sep, rfid_code)
+                        os.path.join(config.base_images_path, company_id, rfid_code) + os.sep, rfid_code,
+                        xvalue, yvalue, width, height)
         # assign values to database fields
         archives = Archives(rfid_code=rfid_code, age=age, company_id=company_id, gather_time=gather_time,
                             health_status=health_status,

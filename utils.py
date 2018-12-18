@@ -77,13 +77,17 @@ def read_image_to_base64(target_images):
     return images_base64_array
 
 
-def process_video_to_image(video, folder_path, rfid_code):
+def process_video_to_image(video, folder_path, rfid_code, xvalue, yvalue, width, height):
     """
     Process the video and save the images to the target folder.
     :param video:
     :param folder_path:
     :param rfid_code:
-    :return:
+    :param xvalue:
+    :param yvalue:
+    :param width:
+    :param height:
+    :return: True or False, the executed result
     """
     try:
         import cv2
@@ -93,7 +97,7 @@ def process_video_to_image(video, folder_path, rfid_code):
         while success:
             vid_cap.set(cv2.CAP_PROP_POS_MSEC, 0.5 * 1000 * count)
             cv2.imwrite(folder_path + rfid_code + "_" + str(count) + "_" + "1" + ".jpg",
-                        image)  # save frame as JPEG file
+                        image[yvalue:yvalue+height, xvalue:xvalue+width])  # save frame as JPEG file
             success, image = vid_cap.read()
             count += 1
         print('Total frames: ', count)
