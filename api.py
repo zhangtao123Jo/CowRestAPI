@@ -15,11 +15,6 @@ import utils
 import json
 import config
 import datetime
-import logging
-import logging.config
-logging.config.fileConfig("log.conf",defaults=None,disable_existing_loggers=True)
-logger=logging.getLogger("cse")
-logger.debug("111")
 
 # DOCS https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
 from concurrent.futures import ThreadPoolExecutor
