@@ -307,7 +307,7 @@ def verify():
     try:
         gather_time = datetime.datetime.strptime(gather_time1, "%Y-%m-%d %H:%M:%S")
     except:
-        abort(400,"gather_time")
+        abort(400,"gathertime")
     try:
         video = request.files['video']
     except:
