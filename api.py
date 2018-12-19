@@ -15,6 +15,11 @@ import utils
 import json
 import config
 import datetime
+import logging
+import logging.config
+logging.config.fileConfig("log.conf",defaults=None,disable_existing_loggers=True)
+logger=logging.getLogger("cse")
+logger.debug("111")
 
 # DOCS https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
 from concurrent.futures import ThreadPoolExecutor
@@ -305,9 +310,9 @@ def verify():
     width = json_obj.get('width')
     height = json_obj.get('height')
     try:
-        gather_time = datetime.datetime.strptime(gather_time1, "%Y/%m/%d %H:%M:%S")
+        gather_time = datetime.datetime.strptime(gather_time1, "%Y-%m-%d %H:%M:%S")
     except:
-        gather_time = gather_time1
+        abort(400,"gather_time")
     try:
         video = request.files['video']
     except:
