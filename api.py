@@ -292,7 +292,9 @@ def verify():
     """
     # get the params first
     user_id = g.user.userid
-    json_obj = json.loads(request.form.get('entity'))
+    entity=request.form.get('entity')
+    utils.verify_param(abort, error_code=400, entity=entity)
+    json_obj = json.loads(entity)
     company_id = json_obj.get('companyid')
     gather_time1 = json_obj.get('gathertime')
     rfid_code = json_obj.get('rfidcode')
