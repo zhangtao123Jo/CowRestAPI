@@ -10,7 +10,7 @@ import logging
 import logging.config
 import time
 import config
-import util
+# import util
 import numpy as np
 import threading 
 from keras.applications.imagenet_utils import preprocess_input
@@ -24,9 +24,11 @@ ALLOWED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'bmp']
 
 logging.basicConfig(level=logging.DEBUG,
                     format='[%(asctime)s] %(levelname)s [%(funcName)s: %(filename)s, %(lineno)d] %(message)s',
-                    filename="logging-xinniuren.log",
+                    filename="logging-xinniuren.logs",
                     datefmt='%Y-%m-%d %H:%M:%S',
                     filemode='a')
+
+
 
 
 def allowed_file(filename):
@@ -166,7 +168,7 @@ def upload_image():
                     for arry in all_coordinates:
                         arry_trans = [arry['Id'], arry['X'], arry['Y'], arry['X'] + arry['W'], arry['Y'] + arry['H']]
                         all_coordinates_trans.append(arry_trans)
-                        all_coordinates, top3_dic_names = executor.predict_back(img, all_coordinates_trans)
+                        all_coordinates, top3_dic_names = executor.predreict_back(img, all_coordinates_trans)
                 prediction_result = create_xml.create_xml(imagename, imageshape, all_coordinates, top3_dic_names, need_id = True)
 
             elif signal == '3':

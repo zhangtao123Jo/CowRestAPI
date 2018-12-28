@@ -18,3 +18,4 @@ noveltyDetectionLayerSize = 1024
 isCenterLoss = None
 isTripletLoss = None
 min_predict = 95.00
+max_video_size=20000

@@ -15,6 +15,12 @@ import utils
 import json
 import config
 import datetime
+import logging.config
+
+if not os.path.exists('logs'):
+    os.mkdir('logs')
+logging.config.fileConfig("log.conf", defaults=None, disable_existing_loggers=True)
+logger = logging.getLogger("log")
 
 # DOCS https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
 from concurrent.futures import ThreadPoolExecutor
@@ -84,7 +90,7 @@ class User(db.Model):
 
 class LogInfo(db.Model):
     """
-    The log class
+    The logs class
     """
     __tablename__ = 'log_info'
     log_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -158,6 +164,16 @@ def error_405(error):
     return str(error)
 
 
+@app.errorhandler(408)
+def error_408(error):
+    return jsonify({"status": "0x0201", "message": "request timeout"})
+
+
+@app.errorhandler(413)
+def error_413(error):
+    return jsonify({"status": "", "message": "Video size needs to be less than 20MB"})
+
+
 @app.errorhandler(500)
 def error_500(error):
     return str(error)
@@ -188,13 +204,20 @@ def new_user():
     password = request.json.get('password')
     company_id = request.json.get('companyid')
     # verify the existence of parameters
-    utils.verify_param(abort, error_code=400, userid=userid, password=password, company_id=company_id)
+    utils.verify_param(abort, logger, error_code=400, userid=userid, password=password, company_id=company_id,
+                       method_name="new_user")
     if User.query.filter_by(userid=userid).first() is not None:
+        logger.error("userid = {} already exists and cannot be added repeatedly".format(userid))
         abort(403)  # existing user
     user = User(userid=userid, company_id=company_id)
     user.hash_password(password)
-    db.session.add(user)
-    db.session.commit()
+    try:
+        db.session.add(user)
+        db.session.commit()
+        logger.info("Database insert user(userid={}，company_id={}) succeeded".format(userid, company_id))
+    except:
+        logger.error("failure to store user(userid={}，company_id={}) to database".format(userid, company_id))
+        abort(502)
     return (jsonify({'userid': user.userid, 'company_id': user.company_id}), 201,
             {'Location': url_for('get_user', userid=user.userid, _external=True)})
 
@@ -207,8 +230,11 @@ def get_user(userid):
     :return: userid
     """
     user = User.query.get(userid)
-    utils.verify_param(abort, error_code=502, user=user)
-    return jsonify({'userid': user.userid})
+    if user:
+        return jsonify({'userid': user.userid})
+    else:
+        logger.error("No user with userid = {} exists".format(userid))
+        abort(502)
 
 
 @app.route('/api/token')
@@ -239,8 +265,8 @@ def prospect():
     predict_array = []
     cid_array = []
     # verify the existence of parameters
-    utils.verify_param(abort, error_code=400, user_id=user_id, company_id=company_id, gather_time=gather_time,
-                       rfid_code=rfid_code, ip=ip, imei=imei, image_array=image_array)
+    utils.verify_param(abort, logger, error_code=400, user_id=user_id, company_id=company_id, gather_time=gather_time,
+                       rfid_code=rfid_code, ip=ip, imei=imei, image_array=image_array, method_name="prospect")
     for i, item in enumerate(image_array):
         # get the base64 str and decode them to image
         img_base64 = item.get('cvalue')
@@ -263,8 +289,16 @@ def prospect():
     result, predict_code = utils.get_predicted_result(predict_array, cid_array)
     if rfid_code == predict_code and result >= config.min_predict:
         resoult = 1
+        logger.info(
+            "From ip {} -> cow rfid_code = {}，company_id = {} prediction success,result = {}%".format(ip, rfid_code,
+                                                                                                      company_id,
+                                                                                                      result))
     else:
         resoult = 0
+        logger.info(
+            "From ip {} -> cow rfid_code = {}，company_id = {} prediction failure,result = {}%".format(ip, rfid_code,
+                                                                                                      company_id,
+                                                                                                      result))
 
     # get the previous registered images top3 and encode them to base64
     pre_files = utils.get_files(os.path.join(config.base_images_path, company_id, predict_code) + os.sep, 3)
@@ -292,8 +326,8 @@ def verify():
     """
     # get the params first
     user_id = g.user.userid
-    entity=request.form.get('entity')
-    utils.verify_param(abort, error_code=400, entity=entity)
+    entity = request.form.get('entity')
+    utils.verify_param(abort, logger, error_code=400, entity=entity, method_name="verify")
     json_obj = json.loads(entity)
     company_id = json_obj.get('companyid')
     gather_time1 = json_obj.get('gathertime')
@@ -307,7 +341,8 @@ def verify():
     try:
         gather_time = datetime.datetime.strptime(gather_time1, "%Y-%m-%d %H:%M:%S")
     except:
-        abort(400,"gathertime")
+        logger.error("gathertime param error from method verfiy")
+        abort(400, "gathertime")
     try:
         video = request.files['video']
     except:
@@ -317,23 +352,34 @@ def verify():
     # give the health_status value, 1 for default now.
     health_status = '1'  # json_obj.get("health_status")
     # verify the existence of parameters
-    utils.verify_param(abort, error_code=400, user_id=user_id, json_obj=json_obj, company_id=company_id,
+    utils.verify_param(abort, logger, error_code=400, user_id=user_id, json_obj=json_obj, company_id=company_id,
                        gather_time=gather_time, rfid_code=rfid_code, ip=ip, imei=imei, xvalue=xvalue,
-                       yvalue=yvalue, width=width, height=height, video=video, age=age, health_status=health_status)
+                       yvalue=yvalue, width=width, height=height, video=video, age=age, health_status=health_status,
+                       method_name="verify")
+
     # judge the existence of cow
-    if Archives.query.filter_by(rfid_code=rfid_code).first():
+    if Archives.query.filter_by(rfid_code=rfid_code, company_id=company_id).first():
+        logger.error("cow rfid_code = {} already exists and cannot be save repeatedly".format(rfid_code))
         abort(403)
     else:
+        # Judging video size
+        video_size = len(video.read()) / float(1000.0)
+        if video_size > config.max_video_size:
+            logger.error(
+                'From ' + ip + ' -> Upload video file : ' + video.filename + ' with size of {} kb , But video_size over 20MB failed to upload'.format(
+                    video_size))
+            abort(413)
         # make the save folder path and save the video
         folder_path = os.path.join(config.base_images_path, company_id, rfid_code) + os.sep
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
+        video.seek(0)
         video.save(folder_path + utils.secure_filename(video.filename))
+        logger.info('From ' + ip + ' -> Upload video file : ' + video.filename + ' with size of {} kb'.format(
+            video_size))
 
         # make async execution thread for the video save and frame grabber
-        executor.submit(utils.process_video_to_image, video,
-                        os.path.join(config.base_images_path, company_id, rfid_code) + os.sep, rfid_code,
-                        xvalue, yvalue, width, height)
+        executor.submit(utils.process_video_to_image, video, folder_path, rfid_code, xvalue, yvalue, width, height)
         # assign values to database fields
         archives = Archives(rfid_code=rfid_code, age=age, company_id=company_id, gather_time=gather_time,
                             health_status=health_status,
@@ -342,8 +388,11 @@ def verify():
         li = LogInfo(company_id=company_id, rfid_code=rfid_code, remote_ip=ip, imei=imei,
                      extra_info='file name is : ' + video.filename)
         db_list = [archives, li]
-        # log the submit info to the db
-        utils.insert_record(db_list, db, abort)
+        # logs the submit info to the db
+        utils.insert_record(logger, db_list, db, abort, company_id, rfid_code, folder_path)
+        logger.info(
+            "cow rfid_code = {} from company_id = {} was successfully inserted into the database".format(rfid_code,
+                                                                                                         company_id))
         return jsonify({
             'userid': user_id,
             'companyid': company_id,
@@ -384,7 +433,7 @@ def cow_list_by_company_id():
     current_page = request.json.get("currentpage")
     cow_number = request.json.get("cownumber")
     company_id = request.json.get("companyid")
-    utils.verify_param(abort, error_code=400, company_id=company_id)
+    utils.verify_param(abort, logger, error_code=400, company_id=company_id, method_name="cow_list_by_company_id")
     try:
         # get a list of cowrest based on the current page number and display number
         if current_page and cow_number:
@@ -395,6 +444,7 @@ def cow_list_by_company_id():
             cow_list = Archives.query.filter_by(company_id=company_id).all()
         return json.dumps(cow_list, default=json_serilize)
     except:
+        logger.error("Database query cow list failed")
         abort(502)
 
 
@@ -409,10 +459,13 @@ def verify_cow_exists():
     company_id = request.json.get('companyid')
     rfid_code = request.json.get('rfidcode')
 
-    utils.verify_param(abort, error_code=400, user_id=user_id, company_id=company_id, rfid_code=rfid_code)
+    utils.verify_param(abort, logger, error_code=400, user_id=user_id, company_id=company_id, rfid_code=rfid_code,
+                       method_name="verify_cow_exists")
     if Archives.query.filter_by(rfid_code=rfid_code, company_id=company_id).first():
+        logger.info("cow rfid_code={} from company_id={} already exist in the Archives".format(rfid_code, company_id))
         result = True
     else:
+        logger.info("cow rfid_code={} from company_id={} not exist in the Archives".format(rfid_code, company_id))
         result = False
     return jsonify({
         'userid': user_id,

@@ -1,6 +1,7 @@
 import base64
 import glob
 import os
+import shutil
 from inference import Inference
 from werkzeug.utils import secure_filename
 
@@ -28,6 +29,11 @@ def get_dir_imgs_number(dir_path):
 
 
 def max_list(lt):
+    """
+     Take out the most elements in the list
+    :param lt: list
+    :return: most elements
+    """
     temp = 0
     for i in lt:
         if lt.count(i) > temp:
@@ -80,13 +86,13 @@ def read_image_to_base64(target_images):
 def process_video_to_image(video, folder_path, rfid_code, xvalue, yvalue, width, height):
     """
     Process the video and save the images to the target folder.
-    :param video:
+    :param video: video file
     :param folder_path:
     :param rfid_code:
-    :param xvalue:
-    :param yvalue:
-    :param width:
-    :param height:
+    :param xvalue: initial x coordinates
+    :param yvalue: initial y coordinates
+    :param width: image width
+    :param height: image height
     :return: True or False, the executed result
     """
     try:
@@ -97,7 +103,7 @@ def process_video_to_image(video, folder_path, rfid_code, xvalue, yvalue, width,
         while success:
             vid_cap.set(cv2.CAP_PROP_POS_MSEC, 0.5 * 1000 * count)
             cv2.imwrite(folder_path + rfid_code + "_" + str(count) + "_" + "1" + ".jpg",
-                        image[yvalue:yvalue+height, xvalue:xvalue+width])  # save frame as JPEG file
+                        image[yvalue:yvalue + height, xvalue:xvalue + width])  # save frame as JPEG file
             success, image = vid_cap.read()
             count += 1
         print('Total frames: ', count)
@@ -107,7 +113,7 @@ def process_video_to_image(video, folder_path, rfid_code, xvalue, yvalue, width,
     return True
 
 
-def insert_record(db_list, db, abort):
+def insert_record(logger, db_list, db, abort, company_id, rfid_code, folder_path):
     """
      processing for inserting multiple detabase items
     :param db_list: list of data to be processed
@@ -121,11 +127,16 @@ def insert_record(db_list, db, abort):
         db.session.commit()
     except:
         db.session.rollback()
+        shutil.rmtree(folder_path)
+        logger.error(
+            "cow rfid_code = {} from company_id = {} failed to inserted into the database , so delete the folder".format(
+                rfid_code,
+                company_id))
         abort(502)
     return True
 
 
-def verify_param(abort, **kwargs):
+def verify_param(abort, logger, **kwargs):
     """
      processing of parameter exception
     :param abort: exception keyword
@@ -134,5 +145,6 @@ def verify_param(abort, **kwargs):
     """
     for key in kwargs:
         if kwargs[key] is None or kwargs[key] == "":
+            logger.error("{} param not right from method {}".format(key, kwargs["method_name"]))
             return abort(kwargs["error_code"], key)
     return True
