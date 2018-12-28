@@ -10,7 +10,7 @@ import logging
 import logging.config
 import time
 import config
-# import util
+import util
 import numpy as np
 import threading 
 from keras.applications.imagenet_utils import preprocess_input
@@ -27,8 +27,6 @@ logging.basicConfig(level=logging.DEBUG,
                     filename="logging-xinniuren.logs",
                     datefmt='%Y-%m-%d %H:%M:%S',
                     filemode='a')
-
-
 
 
 def allowed_file(filename):
