@@ -2,6 +2,7 @@ import base64
 import glob
 import os
 import shutil
+import datetime
 from inference import Inference
 from werkzeug.utils import secure_filename
 
@@ -148,3 +149,18 @@ def verify_param(abort, logger, **kwargs):
             logger.error("{} param not right from method {}".format(key, kwargs["method_name"]))
             return abort(kwargs["error_code"], key)
     return True
+
+def verify_time_param(abort,logger,gather_time1):
+    """
+     verify gather_time param   eg:"2018-01-01 11:11:11"
+    :param abort:
+    :param logger:
+    :param gather_time:
+    :return:  string gather_time
+    """
+    try:
+        gather_time = datetime.datetime.strptime(gather_time1, "%Y-%m-%d %H:%M:%S")
+        return str(gather_time)
+    except:
+        logger.error("gathertime param error from method verfiy")
+        abort(400, "gathertime")

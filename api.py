@@ -171,7 +171,7 @@ def error_408(error):
 
 @app.errorhandler(413)
 def error_413(error):
-    return jsonify({"status": "", "message": "Video size needs to be less than 20MB"})
+    return jsonify({"status": "6x0001", "message": "Video size needs to be less than 20MB"})
 
 
 @app.errorhandler(500)
@@ -257,7 +257,8 @@ def prospect():
     """
     user_id = g.user.userid
     company_id = request.json.get('companyid')
-    gather_time = request.json.get('gathertime')
+    gather_time1 = request.json.get('gathertime')
+    gather_time = utils.verify_time_param(abort, logger, gather_time1)
     rfid_code = request.json.get('rfidcode')
     ip = request.json.get('ip')
     imei = request.json.get('imei')
@@ -331,6 +332,7 @@ def verify():
     json_obj = json.loads(entity)
     company_id = json_obj.get('companyid')
     gather_time1 = json_obj.get('gathertime')
+    gather_time=utils.verify_time_param(abort,logger,gather_time1)
     rfid_code = json_obj.get('rfidcode')
     ip = json_obj.get('ip')
     imei = json_obj.get('imei')
@@ -338,11 +340,6 @@ def verify():
     yvalue = json_obj.get('yvalue')
     width = json_obj.get('width')
     height = json_obj.get('height')
-    try:
-        gather_time = datetime.datetime.strptime(gather_time1, "%Y-%m-%d %H:%M:%S")
-    except:
-        logger.error("gathertime param error from method verfiy")
-        abort(400, "gathertime")
     try:
         video = request.files['video']
     except:
@@ -397,7 +394,7 @@ def verify():
             'userid': user_id,
             'companyid': company_id,
             'resoult': True,
-            'gathertime': str(gather_time),
+            'gathertime': gather_time,
             'verinfo': 'jobs was launched in background',
             'ip': ip,
             'imei': imei,
