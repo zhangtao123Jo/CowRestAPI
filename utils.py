@@ -160,7 +160,7 @@ def verify_time_param(abort,logger,gather_time1):
     """
     try:
         gather_time = datetime.datetime.strptime(gather_time1, "%Y-%m-%d %H:%M:%S")
-        return str(gather_time)
+        return gather_time
     except:
         logger.error("gathertime param error from method verfiy")
         abort(400, "gathertime")

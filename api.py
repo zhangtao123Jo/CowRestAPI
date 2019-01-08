@@ -309,7 +309,7 @@ def prospect():
         'userid': user_id,
         'companyid': company_id,
         'resoult': resoult,
-        'gathertime': gather_time,
+        'gathertime': str(gather_time),
         'percent': "predict_code:{},percent:{}%".format(predict_code, result),
         'verinfo': 'test',
         'ip': ip,
@@ -332,7 +332,7 @@ def verify():
     json_obj = json.loads(entity)
     company_id = json_obj.get('companyid')
     gather_time1 = json_obj.get('gathertime')
-    gather_time=utils.verify_time_param(abort,logger,gather_time1)
+    gather_time = utils.verify_time_param(abort, logger, gather_time1)
     rfid_code = json_obj.get('rfidcode')
     ip = json_obj.get('ip')
     imei = json_obj.get('imei')
@@ -394,7 +394,7 @@ def verify():
             'userid': user_id,
             'companyid': company_id,
             'resoult': True,
-            'gathertime': gather_time,
+            'gathertime': str(gather_time),
             'verinfo': 'jobs was launched in background',
             'ip': ip,
             'imei': imei,
