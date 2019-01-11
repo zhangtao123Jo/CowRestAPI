@@ -84,7 +84,7 @@ def read_image_to_base64(target_images):
     return images_base64_array
 
 
-def process_video_to_image(video, folder_path, rfid_code, xvalue, yvalue, width, height):
+def process_video_to_image(abort, logger, video, folder_path, rfid_code, xvalue, yvalue, width, height):
     """
     Process the video and save the images to the target folder.
     :param video: video file
@@ -108,8 +108,12 @@ def process_video_to_image(video, folder_path, rfid_code, xvalue, yvalue, width,
             success, image = vid_cap.read()
             count += 1
         print('Total frames: ', count)
+        logger.info("Successful pictures storage from cow rfid_code = {}".format(rfid_code))
     except:
         print("error")
+        shutil.rmtree(folder_path)
+        logger.error("Failed to store pictures from cow rfid_code = {} , so delete the folder".format(rfid_code))
+        abort(507)
         return False
     return True
 
@@ -150,7 +154,8 @@ def verify_param(abort, logger, **kwargs):
             return abort(kwargs["error_code"], key)
     return True
 
-def verify_time_param(abort,logger,gather_time1):
+
+def verify_time_param(abort, logger, gather_time1):
     """
      verify gather_time param   eg:"2018-01-01 11:11:11"
     :param abort:

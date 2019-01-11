@@ -164,11 +164,6 @@ def error_405(error):
     return str(error)
 
 
-@app.errorhandler(408)
-def error_408(error):
-    return jsonify({"status": "0x0201", "message": "request timeout"})
-
-
 @app.errorhandler(413)
 def error_413(error):
     return jsonify({"status": "6x0001", "message": "Video size needs to be less than 20MB"})
@@ -187,6 +182,11 @@ def error_502(error):
     :return: exception message
     """
     return jsonify({"status": "3x0000", "message": "database operation error"})
+
+
+@app.errorhandler(507)
+def error_507(error):
+    return jsonify({"status": "7x0001", "message": "Video Interception Picture Failed"})
 
 
 ###############################################
@@ -376,7 +376,9 @@ def verify():
             video_size))
 
         # make async execution thread for the video save and frame grabber
-        executor.submit(utils.process_video_to_image, video, folder_path, rfid_code, xvalue, yvalue, width, height)
+        executor.submit(utils.process_video_to_image, abort, logger, video, folder_path, rfid_code, xvalue, yvalue,
+                        width,
+                        height)
         # assign values to database fields
         archives = Archives(rfid_code=rfid_code, age=age, company_id=company_id, gather_time=gather_time,
                             health_status=health_status,
@@ -421,7 +423,7 @@ def cow_list_by_company_id():
             "rfid_code": instance.rfid_code,
             "age": instance.age,
             "company_id": instance.company_id,
-            "gather_time": instance.gather_time,
+            "gather_time": str(instance.gather_time),
             "health_status": instance.health_status,
             "extra_info": instance.extra_info,
             "folder_path": instance.folder_path
