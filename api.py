@@ -19,7 +19,8 @@ import logging.config
 
 if not os.path.exists('logs'):
     os.mkdir('logs')
-logging.config.fileConfig("log.conf", defaults=None, disable_existing_loggers=True)
+logging.config.fileConfig(os.path.join(os.path.dirname(os.path.abspath(__file__)), r"log.conf"), defaults=None,
+                          disable_existing_loggers=True)
 logger = logging.getLogger("log")
 
 # DOCS https://docs.python.org/3/library/concurrent.futures.html#concurrent.futures.ThreadPoolExecutor
@@ -214,9 +215,9 @@ def new_user():
     try:
         db.session.add(user)
         db.session.commit()
-        logger.info("Database insert user(userid={}，company_id={}) succeeded".format(userid, company_id))
+        logger.info("Database insert user(userid={},company_id={}) succeeded".format(userid, company_id))
     except:
-        logger.error("failure to store user(userid={}，company_id={}) to database".format(userid, company_id))
+        logger.error("failure to store user(userid={},company_id={}) to database".format(userid, company_id))
         abort(502)
     return (jsonify({'userid': user.userid, 'company_id': user.company_id}), 201,
             {'Location': url_for('get_user', userid=user.userid, _external=True)})
@@ -291,13 +292,13 @@ def prospect():
     if rfid_code == predict_code and result >= config.min_predict:
         resoult = 1
         logger.info(
-            "From ip {} -> cow rfid_code = {}，company_id = {} prediction success,result = {}%".format(ip, rfid_code,
+            "From ip {} -> cow rfid_code = {},company_id = {} prediction success,result = {}%".format(ip, rfid_code,
                                                                                                       company_id,
                                                                                                       result))
     else:
         resoult = 0
         logger.info(
-            "From ip {} -> cow rfid_code = {}，company_id = {} prediction failure,result = {}%".format(ip, rfid_code,
+            "From ip {} -> cow rfid_code = {},company_id = {} prediction failure,result = {}%".format(ip, rfid_code,
                                                                                                       company_id,
                                                                                                       result))
 
